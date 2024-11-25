@@ -1,0 +1,1 @@
+from .translate import translate_to_korean
