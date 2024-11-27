@@ -4,7 +4,7 @@ from diffusers.utils import load_image
 import torch
 
 def generate_mask(image, start_x, start_y, end_x, end_y):
-    img = load_image(image)
+    img = Image.open(image)
     width, height = img.size
     
     mask = Image.new("L", (width, height), 0)
@@ -15,16 +15,15 @@ def generate_mask(image, start_x, start_y, end_x, end_y):
     return mask
 
 class Inpainting:
-    def __init__(self):
-        device = "cuda" if torch.cuda.is_available() else "cpu"
+    def __init__(self, device):
+        self.device = device
         self.pipe = AutoPipelineForInpainting.from_pretrained("diffusers/stable-diffusion-xl-1.0-inpainting-0.1", torch_dtype=torch.float16, variant="fp16").to(device)
 
-        self.prompt = "complete the missing parts of the image"
-        self.generator = torch.Generator(device="cuda").manual_seed(0)
+        self.prompt = "erase the text"
+        self.generator = torch.Generator(device=device).manual_seed(0)
 
     def __call__(self, image, mask_image):
-        image = load_image(image)
-        mask_image = load_image(mask_image)
+        image = Image.open(image)
 
         image = self.pipe(
             prompt=self.prompt,
@@ -37,3 +36,8 @@ class Inpainting:
             ).images[0]
         
         return image
+
+if __name__ == "__main__":
+    inpainting = Inpainting("mps")
+    mask = generate_mask("image.jpg", 100, 100, 200, 200)
+    inpainting("image.jpg", mask).save("output.jpg")
